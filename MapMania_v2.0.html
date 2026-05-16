@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Mania v2</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f0ede8;
+            --surface: #faf9f7;
+            --surface2: #ede9e3;
+            --border: #d8d3cb;
+            --border-strong: #bbb5ab;
+            --text: #1a1814;
+            --text-2: #5c5851;
+            --text-3: #9a948b;
+            --accent: #c84b2f;
+            --accent-hover: #a83820;
+            --accent-soft: #f5ebe8;
+            --accent2: #2d6a4f;
+            --accent2-soft: #e8f2ed;
+            --blue: #2b5797;
+            --blue-soft: #e8eef5;
+            --tag-bg: #e8e4dd;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.1), 0 8px 24px rgba(0,0,0,0.06);
+            --radius: 8px;
+            --radius-lg: 12px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            display: flex;
+            height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        /* ── SIDEBAR ── */
+        #sidebar {
+            width: 320px;
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        /* Header */
+        #app-header {
+            padding: 16px 16px 12px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .app-title {
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-title .logo-dot {
+            width: 8px; height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* File actions */
+        #file-actions {
+            padding: 10px 12px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+        }
+
+        .btn {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 6px 11px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            background: var(--surface);
+            color: var(--text-2);
+            transition: all 0.15s;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn:hover {
+            background: var(--bg);
+            border-color: var(--border-strong);
+            color: var(--text);
+        }
+
+        .btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+        .btn.danger {
+            color: var(--accent);
+            border-color: transparent;
+        }
+
+        .btn.danger:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+        /* Layers section */
+        #layers-section {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: var(--text-3);
+            padding: 10px 14px 6px;
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 14px;
+            cursor: pointer;
+            transition: background 0.12s;
+            gap: 8px;
+        }
+
+        .layer-item:hover { background: var(--surface2); }
+
+        .layer-item.active {
+            background: var(--accent-soft);
+        }
+
+        .layer-item .layer-name {
+            font-size: 13px;
+            font-weight: 500;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .layer-item.active .layer-name { color: var(--accent); }
+
+        .layer-eye {
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0.5;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .layer-eye:hover { opacity: 1; background: var(--border); }
+
+        /* Tabs */
+        #panel-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+            padding: 0 12px;
+        }
+
+        .tab-btn {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 9px 12px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            color: var(--text-3);
+            transition: all 0.15s;
+            margin-bottom: -1px;
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* Panels */
+        #panel-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+        .panel.active { display: flex; }
+
+        /* ── FILTER PANEL ── */
+        #filter-panel {
+            overflow-y: auto;
+            padding: 12px;
+            gap: 10px;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-3);
+            letter-spacing: 0.3px;
+        }
+
+        .filter-select {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            padding: 7px 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a948b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            cursor: pointer;
+        }
+
+        .filter-select:focus { outline: none; border-color: var(--accent); }
+
+        /* Weekday toggles */
+        .weekday-toggles {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .day-toggle {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 5px 8px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            cursor: pointer;
+            background: var(--surface);
+            color: var(--text-3);
+            transition: all 0.12s;
+            user-select: none;
+        }
+
+        .day-toggle.on {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 6px;
+            padding-top: 4px;
+        }
+
+        /* ── LOCATIONS PANEL ── */
+        #locations-panel { overflow: hidden; }
+
+        #search-bar {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        #search-input {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            width: 100%;
+            padding: 8px 12px 8px 34px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239a948b' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 10px center;
+        }
+
+        #search-input:focus { outline: none; border-color: var(--accent); background-color: var(--surface); }
+
+        #location-counter {
+            padding: 6px 14px;
+            font-size: 11px;
+            color: var(--text-3);
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+        }
+
+        #location-counter span { color: var(--accent); font-weight: 600; }
+
+        /* Alpha nav */
+        #alpha-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .alpha-btn {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            font-weight: 500;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            cursor: pointer;
+            color: var(--text-3);
+            border: none;
+            background: none;
+            transition: all 0.1s;
+        }
+
+        .alpha-btn:hover { background: var(--surface2); color: var(--text); }
+        .alpha-btn.has-items { color: var(--accent); font-weight: 600; }
+        .alpha-btn.has-items:hover { background: var(--accent-soft); }
+
+        #feature-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .alpha-group-header {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-3);
+            padding: 8px 14px 4px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .feature-item {
+            padding: 9px 14px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.1s;
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+        }
+
+        .feature-item:hover { background: var(--surface2); }
+        .feature-item:last-child { border-bottom: none; }
+
+        .feature-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            margin-top: 5px;
+            flex-shrink: 0;
+        }
+
+        .feature-info { flex: 1; min-width: 0; }
+
+        .feature-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .feature-meta {
+            font-size: 11px;
+            color: var(--text-3);
+            margin-top: 1px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .feature-tags {
+            display: flex;
+            gap: 3px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            font-size: 10px;
+            font-family: 'DM Mono', monospace;
+            padding: 2px 5px;
+            border-radius: 3px;
+            background: var(--tag-bg);
+            color: var(--text-2);
+        }
+
+        .tag.open { background: var(--accent2-soft); color: var(--accent2); }
+        .tag.closed { background: #f5e8e8; color: #8b3030; }
+        .tag.status-active { background: var(--accent2-soft); color: var(--accent2); }
+        .tag.status-passive { background: var(--blue-soft); color: var(--blue); }
+        .tag.status-lost { background: #f5e8e8; color: #8b3030; }
+
+        /* ── IMPORT PANEL ── */
+        #import-panel {
+            padding: 14px;
+            gap: 10px;
+            overflow-y: auto;
+        }
+
+        .import-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+        }
+
+        .import-card h4 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        .import-card p {
+            font-size: 11px;
+            color: var(--text-3);
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .csv-format {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px;
+            color: var(--text-2);
+            overflow-x: auto;
+            white-space: nowrap;
+            margin-bottom: 8px;
+        }
+
+        textarea#paste-area {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            width: 100%;
+            height: 90px;
+            padding: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            resize: vertical;
+        }
+
+        textarea#paste-area:focus { outline: none; border-color: var(--accent); }
+
+        /* ── MAP ── */
+        #map {
+            flex: 1;
+            height: 100%;
+        }
+
+        /* ── MODAL ── */
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+
+        #modal-overlay.open { display: flex; }
+
+        .modal {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 20px;
+            width: 90%;
+            max-width: 480px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 14px; right: 14px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--text-3);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .modal-close:hover { background: var(--surface2); color: var(--text); }
+
+        /* Balloon content overrides */
+        .balloon-content { font-family: 'DM Sans', sans-serif; font-size: 13px; min-width: 200px; }
+        .balloon-content strong { font-size: 14px; display: block; margin-bottom: 6px; }
+        .balloon-row { margin: 3px 0; color: #444; }
+        .balloon-row span { color: #888; font-size: 11px; }
+        .balloon-days { margin-top: 6px; display: flex; gap: 3px; flex-wrap: wrap; }
+        .balloon-day { font-size: 10px; padding: 2px 5px; border-radius: 3px; background: #e8f2ed; color: #2d6a4f; }
+        .balloon-site a { color: #2b5797; text-decoration: none; font-size: 12px; }
+        .balloon-site a:hover { text-decoration: underline; }
+
+        /* Empty state */
+        .empty-state {
+            padding: 30px 20px;
+            text-align: center;
+            color: var(--text-3);
+        }
+
+        .empty-state .icon { font-size: 28px; margin-bottom: 8px; }
+        .empty-state p { font-size: 13px; line-height: 1.5; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <!-- Header -->
+        <div id="app-header">
+            <div class="app-title">
+                <span class="logo-dot"></span>
+                Map Mania
+                <span style="font-weight:300;color:var(--text-3);font-size:13px;margin-left:auto">v2.0</span>
+            </div>
+        </div>
+
+        <!-- File actions -->
+        <div id="file-actions">
+            <button class="btn primary" id="open-geojson">📂 GeoJSON</button>
+            <button class="btn" id="open-kml">🗺 KML</button>
+            <button class="btn danger" id="close-layer">✕ Close</button>
+            <input type="file" id="file-input" style="display:none" accept=".geojson,.json">
+            <input type="file" id="kml-input" style="display:none" accept=".kml,.xml">
+            <input type="file" id="csv-input" style="display:none" accept=".csv,.tsv">
+        </div>
+
+        <!-- Layers -->
+        <div id="layers-section">
+            <div class="section-label">Layers</div>
+            <div id="layer-list">
+                <div class="empty-state" style="padding:10px 14px">
+                    <p style="font-size:12px;color:var(--text-3)">No layers loaded</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div id="panel-tabs">
+            <button class="tab-btn active" data-tab="locations">Locations</button>
+            <button class="tab-btn" data-tab="filters">Filters</button>
+            <button class="tab-btn" data-tab="import">Import</button>
+        </div>
+
+        <!-- Panel content -->
+        <div id="panel-content">
+
+            <!-- ── LOCATIONS PANEL ── -->
+            <div class="panel active" id="locations-panel">
+                <div id="search-bar">
+                    <input type="text" id="search-input" placeholder="Search locations…">
+                </div>
+                <div id="location-counter">Showing <span id="count-shown">0</span> of <span id="count-total">0</span></div>
+                <div id="alpha-nav"></div>
+                <div id="feature-list">
+                    <div class="empty-state">
+                        <div class="icon">📍</div>
+                        <p>Open a GeoJSON or CSV file to see locations here.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── FILTER PANEL ── -->
+            <div class="panel" id="filter-panel">
+                <div class="filter-row">
+                    <span class="filter-label">Status</span>
+                    <select class="filter-select" id="filter-status">
+                        <option value="">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="passive">Passive</option>
+                        <option value="lost">Lost</option>
+                    </select>
+                </div>
+                <div class="filter-row">
+                    <span class="filter-label">Color</span>
+                    <select class="filter-select" id="filter-color">
+                        <option value="">All Colors</option>
+                        <option value="red">Red</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="yellow">Yellow</option>
+                        <option value="orange">Orange</option>
+                        <option value="purple">Purple</option>
+                        <option value="pink">Pink</option>
+                        <option value="black">Black</option>
+                        <option value="white">White</option>
+                        <option value="gray">Gray</option>
+                    </select>
+                </div>
+                <div class="filter-row">
+                    <span class="filter-label">Car</span>
+                    <select class="filter-select" id="filter-car">
+                        <option value="">All Cars</option>
+                        <option value="VW Caddy 1.4">VW Caddy 1.4</option>
+                        <option value="VW Caddy 1.6">VW Caddy 1.6</option>
+                        <option value="Reno Express">Reno Express</option>
+                    </select>
+                </div>
+                <div class="filter-row">
+                    <span class="filter-label">Driver</span>
+                    <select class="filter-select" id="filter-driver">
+                        <option value="">All Drivers</option>
+                    </select>
+                </div>
+                <div class="filter-row">
+                    <span class="filter-label">Owner</span>
+                    <select class="filter-select" id="filter-owner">
+                        <option value="">All Owners</option>
+                    </select>
+                </div>
+                <div class="filter-row">
+                    <span class="filter-label">Open on days (AND)</span>
+                    <div class="weekday-toggles" id="weekday-toggles">
+                        <div class="day-toggle" data-day="W1">Mon</div>
+                        <div class="day-toggle" data-day="W2">Tue</div>
+                        <div class="day-toggle" data-day="W3">Wed</div>
+                        <div class="day-toggle" data-day="W4">Thu</div>
+                        <div class="day-toggle" data-day="W5">Fri</div>
+                        <div class="day-toggle" data-day="W6">Sat</div>
+                        <div class="day-toggle" data-day="W7">Sun</div>
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn primary" id="apply-filter">Apply</button>
+                    <button class="btn" id="clear-filter">Clear All</button>
+                </div>
+            </div>
+
+            <!-- ── IMPORT PANEL ── -->
+            <div class="panel" id="import-panel">
+                <div class="import-card">
+                    <h4>📋 CSV / Excel Direct Import</h4>
+                    <p>Save your Excel file as <strong>.csv</strong> (File → Save As → CSV), then open it here. No converter needed.</p>
+                    <div class="csv-format">ID, NAME, ADDRESS, COORDINATES, PHONE, OWNER,<br>W1, W2, W3, W4, W5, W6, W7,<br>CAR, DRIVER, STATUS, COLOR, SITE, DESCRIPTION</div>
+                    <button class="btn primary" id="open-csv" style="width:100%">📂 Open CSV File</button>
+                </div>
+                <div class="import-card">
+                    <h4>📌 Paste from Excel</h4>
+                    <p>Select and copy cells in Excel (Ctrl+C), then paste below (Ctrl+V). First row should be column headers.</p>
+                    <textarea id="paste-area" placeholder="Paste Excel data here…"></textarea>
+                    <button class="btn primary" id="parse-paste" style="width:100%;margin-top:6px">Import Pasted Data</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Map -->
+    <div id="map"></div>
+
+    <!-- Modal -->
+    <div id="modal-overlay">
+        <div class="modal" id="modal-box">
+            <button class="modal-close" id="modal-close">✕</button>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=93c3d865-0103-43f9-8498-c654eb9bf7b4&lang=en_US"></script>
+    <script>
+    // ─── CONSTANTS ───────────────────────────────────────────────
+    const DAYS = { W1:'Mon', W2:'Tue', W3:'Wed', W4:'Thu', W5:'Fri', W6:'Sat', W7:'Sun' };
+    const COLOR_MAP = {
+        red:'#e74c3c', blue:'#3498db', green:'#27ae60', yellow:'#f1c40f',
+        orange:'#e67e22', purple:'#9b59b6', pink:'#e91e8c', black:'#222',
+        white:'#ddd', gray:'#95a5a6'
+    };
+
+    // ─── STATE ───────────────────────────────────────────────────
+    let map;
+    let layers = [];
+    let currentLayer = null;
+    let currentFilters = { status:'', color:'', car:'', driver:'', owner:'', days:[] };
+    let searchQuery = '';
+    let activeTab = 'locations';
+
+    // ─── DOM REFS ────────────────────────────────────────────────
+    const $ = id => document.getElementById(id);
+    const el = {
+        layerList: $('layer-list'),
+        featureList: $('feature-list'),
+        searchInput: $('search-input'),
+        countShown: $('count-shown'),
+        countTotal: $('count-total'),
+        alphaNav: $('alpha-nav'),
+        filterStatus: $('filter-status'),
+        filterColor: $('filter-color'),
+        filterCar: $('filter-car'),
+        filterDriver: $('filter-driver'),
+        filterOwner: $('filter-owner'),
+        weekdayToggles: document.querySelectorAll('.day-toggle'),
+        pasteArea: $('paste-area'),
+        modalOverlay: $('modal-overlay'),
+        modalBody: $('modal-body'),
+    };
+
+    // ─── INIT ────────────────────────────────────────────────────
+    ymaps.ready(initMap);
+
+    function initMap() {
+        map = new ymaps.Map('map', {
+            center: [40.1811, 44.5136],
+            zoom: 12,
+            controls: ['zoomControl', 'typeSelector', 'fullscreenControl']
+        });
+
+        // Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                $(`${btn.dataset.tab}-panel`).classList.add('active');
+                activeTab = btn.dataset.tab;
+            });
+        });
+
+        // File buttons
+        $('open-geojson').onclick = () => $('file-input').click();
+        $('open-kml').onclick = () => $('kml-input').click();
+        $('open-csv').onclick = () => $('csv-input').click();
+        $('close-layer').onclick = closeCurrentLayer;
+        $('file-input').onchange = importGeoJSON;
+        $('kml-input').onchange = importKML;
+        $('csv-input').onchange = importCSV;
+
+        // Filters
+        $('apply-filter').onclick = applyFilters;
+        $('clear-filter').onclick = clearFilters;
+        el.weekdayToggles.forEach(t => t.onclick = () => {
+            t.classList.toggle('on');
+            const day = t.dataset.day;
+            if (t.classList.contains('on')) {
+                if (!currentFilters.days.includes(day)) currentFilters.days.push(day);
+            } else {
+                currentFilters.days = currentFilters.days.filter(d => d !== day);
+            }
+        });
+
+        // Search
+        el.searchInput.addEventListener('input', e => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            renderFeatureList();
+        });
+
+        // Paste import
+        $('parse-paste').onclick = () => {
+            const raw = el.pasteArea.value.trim();
+            if (!raw) return;
+            parseCSVText(raw, 'Pasted Data');
+            el.pasteArea.value = '';
+        };
+
+        // Modal
+        $('modal-close').onclick = () => el.modalOverlay.classList.remove('open');
+        el.modalOverlay.onclick = e => { if (e.target === el.modalOverlay) el.modalOverlay.classList.remove('open'); };
+
+        // Build alpha nav
+        buildAlphaNav();
+    }
+
+    // ─── ALPHA NAV ────────────────────────────────────────────────
+    function buildAlphaNav() {
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        el.alphaNav.innerHTML = '';
+        letters.forEach(l => {
+            const btn = document.createElement('button');
+            btn.className = 'alpha-btn';
+            btn.textContent = l;
+            btn.dataset.letter = l;
+            btn.onclick = () => {
+                const header = document.querySelector(`[data-alpha-header="${l}"]`);
+                if (header) header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            };
+            el.alphaNav.appendChild(btn);
+        });
+    }
+
+    function updateAlphaHighlights(visibleFeatures) {
+        const activeLetters = new Set(visibleFeatures.map(f => {
+            const name = (f.properties.name || '').toUpperCase();
+            return name[0] || '';
+        }));
+        document.querySelectorAll('.alpha-btn').forEach(btn => {
+            btn.classList.toggle('has-items', activeLetters.has(btn.dataset.letter));
+        });
+    }
+
+    // ─── LAYER MANAGEMENT ────────────────────────────────────────
+    function addLayer(data, name, isRoute = false) {
+        const layer = {
+            id: Date.now(),
+            name: name || `Layer ${layers.length + 1}`,
+            visible: true,
+            isRoute,
+            features: isRoute ? [] : (data.features || []),
+            geoObjects: new ymaps.GeoObjectCollection(),
+            routeInfo: null
+        };
+
+        if (isRoute) {
+            const path = new ymaps.Polyline(data, { hintContent: name }, {
+                strokeColor: '#c84b2f', strokeWidth: 4, strokeOpacity: 0.8
+            });
+            layer.geoObjects.add(path);
+            if (data.length > 0) {
+                layer.routeInfo = { points: data.length, startPoint: data[0], endPoint: data[data.length - 1] };
+                layer.geoObjects.add(new ymaps.Placemark(data[0], { hintContent: 'Start' }, { preset: 'islands#greenDotIcon' }));
+                layer.geoObjects.add(new ymaps.Placemark(data[data.length - 1], { hintContent: 'End' }, { preset: 'islands#redDotIcon' }));
+            }
+        } else {
+            layer.features.forEach(feature => {
+                const props = feature.properties;
+                const iconColor = COLOR_MAP[props.color?.toLowerCase()] || '#c84b2f';
+                const iconUrl = createTriangleIcon(iconColor);
+                const coords = parseCoords(props.coordinates || (feature.geometry?.coordinates ? `${feature.geometry.coordinates[1]}, ${feature.geometry.coordinates[0]}` : ''));
+                if (!coords) return;
+
+                const placemark = new ymaps.Placemark(
+                    coords,
+                    { ...props, balloonContent: buildBalloon(props) },
+                    { iconLayout: 'default#image', iconImageHref: iconUrl, iconImageSize: [24, 24], iconImageOffset: [-12, -24] }
+                );
+                layer.geoObjects.add(placemark);
+            });
+        }
+
+        map.geoObjects.add(layer.geoObjects);
+        layers.push(layer);
+        currentLayer = layer;
+
+        updateLayerList();
+        populateDynamicFilters();
+        renderFeatureList();
+        return layer;
+    }
+
+    function removeLayer(id) {
+        const idx = layers.findIndex(l => l.id === id);
+        if (idx === -1) return;
+        map.geoObjects.remove(layers[idx].geoObjects);
+        layers.splice(idx, 1);
+        currentLayer = layers.length > 0 ? layers[layers.length - 1] : null;
+        updateLayerList();
+        renderFeatureList();
+    }
+
+    function toggleLayerVisibility(id) {
+        const layer = layers.find(l => l.id === id);
+        if (!layer) return;
+        layer.visible = !layer.visible;
+        layer.visible ? map.geoObjects.add(layer.geoObjects) : map.geoObjects.remove(layer.geoObjects);
+        updateLayerList();
+    }
+
+    function selectLayer(id) {
+        currentLayer = layers.find(l => l.id === id) || currentLayer;
+        updateLayerList();
+        renderFeatureList();
+        if (currentLayer?.isRoute) {
+            try { map.setBounds(currentLayer.geoObjects.getBounds(), { checkZoomRange: true, zoomMargin: 30 }); } catch(e) {}
+        }
+    }
+
+    function closeCurrentLayer() {
+        if (currentLayer) removeLayer(currentLayer.id);
+    }
+
+    function updateLayerList() {
+        el.layerList.innerHTML = '';
+        if (layers.length === 0) {
+            el.layerList.innerHTML = '<div style="padding:8px 14px;font-size:12px;color:var(--text-3)">No layers loaded</div>';
+            return;
+        }
+        layers.forEach(layer => {
+            const item = document.createElement('div');
+            item.className = 'layer-item' + (layer.id === currentLayer?.id ? ' active' : '');
+            item.innerHTML = `
+                <span style="font-size:13px">${layer.isRoute ? '🛣️' : '📍'}</span>
+                <span class="layer-name">${layer.name}</span>
+                <span class="layer-eye">${layer.visible ? '👁' : '🚫'}</span>
+            `;
+            item.onclick = () => selectLayer(layer.id);
+            item.querySelector('.layer-eye').onclick = e => { e.stopPropagation(); toggleLayerVisibility(layer.id); };
+            el.layerList.appendChild(item);
+        });
+    }
+
+    // ─── FEATURE LIST (A-Z + SEARCH) ────────────────────────────
+    function getFilteredFeatures() {
+        if (!currentLayer || currentLayer.isRoute) return [];
+        return currentLayer.features.filter(f => {
+            const p = f.properties;
+            const name = (p.name || '').toLowerCase();
+            const addr = (p.address || '').toLowerCase();
+            const matchSearch = !searchQuery || name.includes(searchQuery) || addr.includes(searchQuery) || (p.phone||'').includes(searchQuery);
+            const matchStatus = !currentFilters.status || (p.status||'').toLowerCase() === currentFilters.status;
+            const matchColor = !currentFilters.color || (p.color||'').toLowerCase() === currentFilters.color;
+            const matchCar = !currentFilters.car || p.car === currentFilters.car;
+            const matchDriver = !currentFilters.driver || p.driver === currentFilters.driver;
+            const matchOwner = !currentFilters.owner || p.owner === currentFilters.owner;
+            const matchDays = currentFilters.days.length === 0 || currentFilters.days.every(d => {
+                const v = (p[d] || '').toString().toUpperCase();
+                return v === 'TRUE' || v === '1' || v === 'YES';
+            });
+            return matchSearch && matchStatus && matchColor && matchCar && matchDriver && matchOwner && matchDays;
+        });
+    }
+
+    function renderFeatureList() {
+        const features = getFilteredFeatures();
+        el.countTotal.textContent = currentLayer?.features?.length || 0;
+        el.countShown.textContent = features.length;
+        updateAlphaHighlights(features);
+
+        if (!currentLayer || currentLayer.isRoute) {
+            el.featureList.innerHTML = currentLayer?.isRoute
+                ? `<div class="feature-item"><div class="feature-info"><div class="feature-name">🛣️ ${currentLayer.name}</div><div class="feature-meta">${currentLayer.routeInfo?.points || 0} points</div></div></div>`
+                : `<div class="empty-state"><div class="icon">📍</div><p>Open a GeoJSON or CSV file to see locations.</p></div>`;
+            return;
+        }
+
+        if (features.length === 0) {
+            el.featureList.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>No locations match your search or filters.</p></div>`;
+            return;
+        }
+
+        // Sort A-Z
+        const sorted = [...features].sort((a, b) => {
+            const na = (a.properties.name || '').toLowerCase();
+            const nb = (b.properties.name || '').toLowerCase();
+            return na.localeCompare(nb);
+        });
+
+        // Group by first letter
+        const groups = {};
+        sorted.forEach(f => {
+            const letter = (f.properties.name || '#')[0].toUpperCase();
+            const key = /[A-Z]/.test(letter) ? letter : '#';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(f);
+        });
+
+        el.featureList.innerHTML = '';
+        Object.keys(groups).sort().forEach(letter => {
+            const header = document.createElement('div');
+            header.className = 'alpha-group-header';
+            header.textContent = letter;
+            header.dataset.alphaHeader = letter;
+            el.featureList.appendChild(header);
+
+            groups[letter].forEach(f => {
+                const p = f.properties;
+                const item = document.createElement('div');
+                item.className = 'feature-item';
+
+                const dotColor = COLOR_MAP[p.color?.toLowerCase()] || '#ccc';
+                const statusClass = p.status ? `status-${p.status.toLowerCase()}` : '';
+
+                // Build day tags
+                const openDays = Object.entries(DAYS).filter(([key]) => {
+                    const v = (p[key] || '').toString().toUpperCase();
+                    return v === 'TRUE' || v === '1' || v === 'YES';
+                }).map(([, name]) => name);
+
+                const dayTagsHTML = openDays.length > 0
+                    ? openDays.map(d => `<span class="tag open">${d}</span>`).join('')
+                    : '';
+
+                const statusTag = p.status ? `<span class="tag ${statusClass}">${p.status}</span>` : '';
+                const carTag = p.car ? `<span class="tag">${p.car}</span>` : '';
+
+                item.innerHTML = `
+                    <div class="feature-dot" style="background:${dotColor}"></div>
+                    <div class="feature-info">
+                        <div class="feature-name">${p.name || '—'}</div>
+                        ${p.address ? `<div class="feature-meta">${p.address}</div>` : ''}
+                        <div class="feature-tags">${statusTag}${carTag}${dayTagsHTML}</div>
+                    </div>
+                `;
+                item.onclick = () => focusFeature(f);
+                el.featureList.appendChild(item);
+            });
+        });
+
+        // Sync map visibility
+        syncMapVisibility(features);
+    }
+
+    function focusFeature(feature) {
+        const coords = parseCoords(feature.properties.coordinates || '');
+        if (!coords) return;
+        map.setCenter(coords, 16);
+        // Find and open balloon
+        currentLayer.geoObjects.each(placemark => {
+            try {
+                if (placemark.properties.get('id') == feature.properties.id) {
+                    placemark.balloon.open();
+                }
+            } catch(e) {}
+        });
+    }
+
+    function syncMapVisibility(visibleFeatures) {
+        if (!currentLayer || currentLayer.isRoute) return;
+        const visibleIds = new Set(visibleFeatures.map(f => f.properties.id));
+        currentLayer.geoObjects.each(placemark => {
+            try {
+                const id = placemark.properties.get('id');
+                placemark.options.set('visible', visibleIds.has(id));
+            } catch(e) {}
+        });
+    }
+
+    // ─── FILTERS ──────────────────────────────────────────────────
+    function applyFilters() {
+        currentFilters.status = el.filterStatus.value;
+        currentFilters.color = el.filterColor.value;
+        currentFilters.car = el.filterCar.value;
+        currentFilters.driver = el.filterDriver.value;
+        currentFilters.owner = el.filterOwner.value;
+        // days already updated via toggle clicks
+        renderFeatureList();
+    }
+
+    function clearFilters() {
+        el.filterStatus.value = '';
+        el.filterColor.value = '';
+        el.filterCar.value = '';
+        el.filterDriver.value = '';
+        el.filterOwner.value = '';
+        currentFilters = { status:'', color:'', car:'', driver:'', owner:'', days:[] };
+        el.weekdayToggles.forEach(t => t.classList.remove('on'));
+        searchQuery = '';
+        el.searchInput.value = '';
+        renderFeatureList();
+    }
+
+    function populateDynamicFilters() {
+        if (!currentLayer || currentLayer.isRoute) return;
+        const drivers = new Set();
+        const owners = new Set();
+        currentLayer.features.forEach(f => {
+            if (f.properties.driver) drivers.add(f.properties.driver);
+            if (f.properties.owner) owners.add(f.properties.owner);
+        });
+        const fillSelect = (sel, values) => {
+            const cur = sel.value;
+            sel.innerHTML = `<option value="">All</option>`;
+            [...values].sort().forEach(v => {
+                const o = document.createElement('option');
+                o.value = v; o.textContent = v;
+                sel.appendChild(o);
+            });
+            sel.value = cur;
+        };
+        fillSelect(el.filterDriver, drivers);
+        fillSelect(el.filterOwner, owners);
+    }
+
+    // ─── IMPORT: GeoJSON ─────────────────────────────────────────
+    function importGeoJSON(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            try {
+                const data = JSON.parse(ev.target.result);
+                if (data.type !== 'FeatureCollection') throw new Error('Invalid GeoJSON');
+                addLayer(data, file.name.replace(/\.[^.]+$/, ''));
+            } catch (err) {
+                alert('Error reading GeoJSON: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    }
+
+    // ─── IMPORT: KML ──────────────────────────────────────────────
+    function importKML(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            try {
+                const kmlDoc = new DOMParser().parseFromString(ev.target.result, 'text/xml');
+                const ns = 'http://www.opengis.net/kml/2.2';
+                const placemarks = kmlDoc.getElementsByTagNameNS(ns, 'Placemark');
+                if (!placemarks.length) throw new Error('No placemarks found');
+                const layerName = file.name.replace(/\.[^.]+$/, '');
+                for (let pm of placemarks) {
+                    for (let ls of pm.getElementsByTagNameNS(ns, 'LineString')) {
+                        const coords = ls.getElementsByTagNameNS(ns, 'coordinates')[0]?.textContent.trim();
+                        if (!coords) continue;
+                        const pts = coords.split(/\s+/).map(p => {
+                            const [lon, lat] = p.split(',').map(parseFloat);
+                            return isNaN(lat) ? null : [lat, lon];
+                        }).filter(Boolean);
+                        if (pts.length > 1) {
+                            addLayer(pts, layerName, true);
+                            try { map.setBounds(getBounds(pts), { checkZoomRange: true, zoomMargin: 30 }); } catch(e) {}
+                            break;
+                        }
+                    }
+                }
+            } catch (err) {
+                alert('KML error: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    }
+
+    // ─── IMPORT: CSV ──────────────────────────────────────────────
+    function importCSV(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => parseCSVText(ev.target.result, file.name.replace(/\.[^.]+$/, ''));
+        reader.readAsText(file);
+        e.target.value = '';
+    }
+
+    function parseCSVText(raw, layerName) {
+        try {
+            const lines = raw.split('\n').filter(l => l.trim());
+            if (lines.length < 2) throw new Error('Need at least a header + one data row');
+
+            // Detect separator
+            const sep = lines[0].includes('\t') ? '\t' : ',';
+            const headers = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+
+            const features = [];
+            for (let i = 1; i < lines.length; i++) {
+                const vals = splitCSVLine(lines[i], sep);
+                if (vals.length < 2) continue;
+                const props = {};
+                headers.forEach((h, idx) => { props[h] = (vals[idx] || '').trim().replace(/^["']|["']$/g, ''); });
+
+                // Normalize column names
+                const p = {
+                    id: props.id || i,
+                    name: props.name || props.NAME || '',
+                    address: props.address || props.ADDRESS || '',
+                    coordinates: props.coordinates || props.cordinates || props.coords || '',
+                    phone: props.phone || props.PHONE || '',
+                    owner: props.owner || props.OWNER || '',
+                    W1: props.w1 || props.W1 || '',
+                    W2: props.w2 || props.W2 || '',
+                    W3: props.w3 || props.W3 || '',
+                    W4: props.w4 || props.W4 || '',
+                    W5: props.w5 || props.W5 || '',
+                    W6: props.w6 || props.W6 || '',
+                    W7: props.w7 || props.W7 || '',
+                    car: props.car || props.CAR || '',
+                    driver: props.driver || props.DRIVER || '',
+                    status: props.status || props.STATUS || '',
+                    color: props.color || props.COLOR || '',
+                    site: props.site || props.SITE || '',
+                    description: props.description || props.DESCRIPTION || '',
+                };
+
+                const coords = parseCoords(p.coordinates);
+                if (!coords) continue;
+
+                features.push({
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: [coords[1], coords[0]] },
+                    properties: p
+                });
+            }
+
+            if (features.length === 0) throw new Error('No valid locations found (check COORDINATES column)');
+            addLayer({ type: 'FeatureCollection', features }, layerName);
+            // Switch to locations tab
+            document.querySelector('[data-tab="locations"]').click();
+        } catch (err) {
+            alert('CSV import error: ' + err.message);
+        }
+    }
+
+    function splitCSVLine(line, sep) {
+        // Handle quoted fields
+        if (sep === ',') {
+            const res = [];
+            let cur = '', inQ = false;
+            for (let c of line) {
+                if (c === '"') { inQ = !inQ; }
+                else if (c === sep && !inQ) { res.push(cur); cur = ''; }
+                else { cur += c; }
+            }
+            res.push(cur);
+            return res;
+        }
+        return line.split(sep);
+    }
+
+    // ─── HELPERS ──────────────────────────────────────────────────
+    function parseCoords(str) {
+        if (!str) return null;
+        const parts = str.toString().split(',').map(s => parseFloat(s.trim()));
+        if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            return [parts[0], parts[1]]; // [lat, lon]
+        }
+        return null;
+    }
+
+    function createTriangleIcon(color) {
+        const svg = `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22 L2 2 L22 2 Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    function buildBalloon(p) {
+        const openDays = Object.entries(DAYS).filter(([key]) => {
+            const v = (p[key] || '').toString().toUpperCase();
+            return v === 'TRUE' || v === '1' || v === 'YES';
+        }).map(([, name]) => name);
+
+        const daysHTML = openDays.length > 0
+            ? `<div class="balloon-days">${openDays.map(d => `<span class="balloon-day">${d}</span>`).join('')}</div>` : '';
+
+        const phoneHTML = p.phone ? `<div class="balloon-row"><span>Phone</span> <a href="tel:${p.phone}">${p.phone}</a></div>` : '';
+        const siteHTML = p.site ? `<div class="balloon-row balloon-site"><span>Site</span> <a href="${p.site}" target="_blank">${p.site}</a></div>` : '';
+        const descHTML = p.description ? `<div class="balloon-row" style="margin-top:6px;font-size:11px;color:#666">${p.description}</div>` : '';
+
+        return `<div class="balloon-content">
+            <strong>${p.name || 'Unnamed'}</strong>
+            ${p.address ? `<div class="balloon-row"><span>Address</span> ${p.address}</div>` : ''}
+            ${p.status ? `<div class="balloon-row"><span>Status</span> ${p.status}</div>` : ''}
+            ${p.owner ? `<div class="balloon-row"><span>Owner</span> ${p.owner}</div>` : ''}
+            ${phoneHTML}
+            ${p.car ? `<div class="balloon-row"><span>Car</span> ${p.car}</div>` : ''}
+            ${p.driver ? `<div class="balloon-row"><span>Driver</span> ${p.driver}</div>` : ''}
+            ${siteHTML}
+            ${daysHTML}
+            ${descHTML}
+        </div>`;
+    }
+
+    function getBounds(coords) {
+        let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+        coords.forEach(([lat, lon]) => {
+            minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
+            minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
+        });
+        return [[minLat, minLon], [maxLat, maxLon]];
+    }
+    </script>
+</body>
+</html>
