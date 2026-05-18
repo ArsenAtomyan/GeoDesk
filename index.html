@@ -595,7 +595,7 @@
         <!-- Tabs -->
         <div id="panel-tabs">
             <button class="tab-btn active" data-tab="locations">Locations</button>
-            <button class="tab-btn" data-tab="filters">Filters</button>
+            <button class="tab-btn" data-tab="filter">Filters</button>
             <button class="tab-btn" data-tab="import">Import</button>
         </div>
 
@@ -623,34 +623,18 @@
                     <span class="filter-label">Status</span>
                     <select class="filter-select" id="filter-status">
                         <option value="">All Statuses</option>
-                        <option value="active">Active</option>
-                        <option value="passive">Passive</option>
-                        <option value="lost">Lost</option>
                     </select>
                 </div>
                 <div class="filter-row">
                     <span class="filter-label">Color</span>
                     <select class="filter-select" id="filter-color">
                         <option value="">All Colors</option>
-                        <option value="red">Red</option>
-                        <option value="blue">Blue</option>
-                        <option value="green">Green</option>
-                        <option value="yellow">Yellow</option>
-                        <option value="orange">Orange</option>
-                        <option value="purple">Purple</option>
-                        <option value="pink">Pink</option>
-                        <option value="black">Black</option>
-                        <option value="white">White</option>
-                        <option value="gray">Gray</option>
                     </select>
                 </div>
                 <div class="filter-row">
                     <span class="filter-label">Car</span>
                     <select class="filter-select" id="filter-car">
                         <option value="">All Cars</option>
-                        <option value="VW Caddy 1.4">VW Caddy 1.4</option>
-                        <option value="VW Caddy 1.6">VW Caddy 1.6</option>
-                        <option value="Reno Express">Reno Express</option>
                     </select>
                 </div>
                 <div class="filter-row">
@@ -781,9 +765,12 @@
         $('kml-input').onchange = importKML;
         $('csv-input').onchange = importCSV;
 
-        // Filters
+        // Filters — live apply on every change
         $('apply-filter').onclick = applyFilters;
         $('clear-filter').onclick = clearFilters;
+        [el.filterStatus, el.filterColor, el.filterCar, el.filterDriver, el.filterOwner].forEach(sel => {
+            sel.addEventListener('change', applyFilters);
+        });
         el.weekdayToggles.forEach(t => t.onclick = () => {
             t.classList.toggle('on');
             const day = t.dataset.day;
@@ -792,6 +779,7 @@
             } else {
                 currentFilters.days = currentFilters.days.filter(d => d !== day);
             }
+            applyFilters();
         });
 
         // Search
@@ -818,7 +806,7 @@
 
     // ─── ALPHA NAV ────────────────────────────────────────────────
     function buildAlphaNav() {
-        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const letters = ['Ա','Բ','Գ','Դ','Ե','Զ','Է','Ը','Թ','Ժ','Ի','Լ','Խ','Ծ','Կ','Հ','Ձ','Ղ','Ճ','Մ','Յ','Ն','Շ','Ո','Չ','Պ','Ջ','Ռ','Ս','Վ','Տ','Ր','Ց','Ւ','Փ','Ք','Օ','Ֆ'];
         el.alphaNav.innerHTML = '';
         letters.forEach(l => {
             const btn = document.createElement('button');
@@ -839,7 +827,9 @@
             return name[0] || '';
         }));
         document.querySelectorAll('.alpha-btn').forEach(btn => {
-            btn.classList.toggle('has-items', activeLetters.has(btn.dataset.letter));
+            // Match uppercase Armenian (U+0531–U+0556) or the '#' fallback
+            const l = btn.dataset.letter;
+            btn.classList.toggle('has-items', activeLetters.has(l));
         });
     }
 
@@ -913,6 +903,7 @@
     function selectLayer(id) {
         currentLayer = layers.find(l => l.id === id) || currentLayer;
         updateLayerList();
+        populateDynamicFilters();
         renderFeatureList();
         if (currentLayer?.isRoute) {
             try { map.setBounds(currentLayer.geoObjects.getBounds(), { checkZoomRange: true, zoomMargin: 30 }); } catch(e) {}
@@ -990,16 +981,25 @@
         });
 
         // Group by first letter
+        const ARMENIAN_ORDER = ['Ա','Բ','Գ','Դ','Ե','Զ','Է','Ը','Թ','Ժ','Ի','Լ','Խ','Ծ','Կ','Հ','Ձ','Ղ','Ճ','Մ','Յ','Ն','Շ','Ո','Չ','Պ','Ջ','Ռ','Ս','Վ','Տ','Ր','Ց','Ւ','Փ','Ք','Օ','Ֆ'];
         const groups = {};
         sorted.forEach(f => {
             const letter = (f.properties.name || '#')[0].toUpperCase();
-            const key = /[A-Z]/.test(letter) ? letter : '#';
+            const key = /[\u0531-\u0556]/.test(letter) ? letter : '#';
             if (!groups[key]) groups[key] = [];
             groups[key].push(f);
         });
 
         el.featureList.innerHTML = '';
-        Object.keys(groups).sort().forEach(letter => {
+        const sortedKeys = Object.keys(groups).sort((a, b) => {
+            const ai = ARMENIAN_ORDER.indexOf(a);
+            const bi = ARMENIAN_ORDER.indexOf(b);
+            if (ai === -1 && bi === -1) return a.localeCompare(b);
+            if (ai === -1) return 1;
+            if (bi === -1) return -1;
+            return ai - bi;
+        });
+        sortedKeys.forEach(letter => {
             const header = document.createElement('div');
             header.className = 'alpha-group-header';
             header.textContent = letter;
@@ -1095,15 +1095,21 @@
 
     function populateDynamicFilters() {
         if (!currentLayer || currentLayer.isRoute) return;
+        const statuses = new Set();
+        const colors = new Set();
+        const cars = new Set();
         const drivers = new Set();
         const owners = new Set();
         currentLayer.features.forEach(f => {
+            if (f.properties.status) statuses.add(f.properties.status);
+            if (f.properties.color) colors.add(f.properties.color);
+            if (f.properties.car) cars.add(f.properties.car);
             if (f.properties.driver) drivers.add(f.properties.driver);
             if (f.properties.owner) owners.add(f.properties.owner);
         });
-        const fillSelect = (sel, values) => {
+        const fillSelect = (sel, values, allLabel) => {
             const cur = sel.value;
-            sel.innerHTML = `<option value="">All</option>`;
+            sel.innerHTML = `<option value="">${allLabel}</option>`;
             [...values].sort().forEach(v => {
                 const o = document.createElement('option');
                 o.value = v; o.textContent = v;
@@ -1111,8 +1117,11 @@
             });
             sel.value = cur;
         };
-        fillSelect(el.filterDriver, drivers);
-        fillSelect(el.filterOwner, owners);
+        fillSelect(el.filterStatus, statuses, 'All Statuses');
+        fillSelect(el.filterColor, colors, 'All Colors');
+        fillSelect(el.filterCar, cars, 'All Cars');
+        fillSelect(el.filterDriver, drivers, 'All Drivers');
+        fillSelect(el.filterOwner, owners, 'All Owners');
     }
 
     // ─── IMPORT: GeoJSON ─────────────────────────────────────────
