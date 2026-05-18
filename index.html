@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Map Mania v2.1</title>
+    <title>Map Mania v2.1.2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
@@ -559,6 +559,42 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+        /* Route section */
+        .route-section {
+            margin: 10px 14px 14px;
+            padding: 12px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+        }
+        .route-section-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+        .route-btn-row {
+            display: flex;
+            gap: 6px;
+        }
+        .route-btn-row .btn.primary {
+            flex: 1;
+        }
+        .route-btn-row .btn:last-child {
+            flex-shrink: 0;
+            padding: 0 12px;
+        }
+        .route-status {
+            font-size: 11px;
+            color: var(--text-3);
+            margin-top: 7px;
+            min-height: 14px;
+        }
+        .route-status.error { color: #c0392b; }
+        .route-status.success { color: var(--accent2); }
     </style>
 </head>
 <body>
@@ -568,7 +604,7 @@
             <div class="app-title">
                 <span class="logo-dot"></span>
                 Map Mania
-                <span style="font-weight:300;color:var(--text-3);font-size:13px;margin-left:auto">v2.1</span>
+                <span style="font-weight:300;color:var(--text-3);font-size:13px;margin-left:auto">v2.1.2</span>
             </div>
         </div>
 
@@ -664,6 +700,15 @@
                 <div class="filter-actions">
                     <button class="btn primary" id="apply-filter">Apply</button>
                     <button class="btn" id="clear-filter">Clear All</button>
+                </div>
+                <div class="route-section">
+                    <div class="route-section-label">🗺 Route from filtered locations</div>
+                    <input type="text" id="route-start-input" class="filter-select" placeholder="Start address or lat,lon (optional)" style="width:100%;margin-bottom:8px;box-sizing:border-box;">
+                    <div class="route-btn-row">
+                        <button class="btn primary" id="open-route-btn">Open in Yandex Maps</button>
+                        <button class="btn" id="copy-route-btn" title="Copy link">⎘ Copy</button>
+                    </div>
+                    <div id="route-status" class="route-status"></div>
                 </div>
             </div>
 
@@ -799,6 +844,70 @@
         // Modal
         $('modal-close').onclick = () => el.modalOverlay.classList.remove('open');
         el.modalOverlay.onclick = e => { if (e.target === el.modalOverlay) el.modalOverlay.classList.remove('open'); };
+
+        // Route buttons
+        const routeStatus = $('route-status');
+
+        function buildYandexRouteUrl(startPoint, features) {
+            // startPoint is either "lat,lon" string or an address string
+            const stops = [startPoint, ...features.map(f => {
+                const [lon, lat] = f.geometry.coordinates;
+                return `${lat},${lon}`;
+            })].join('~');
+            return `https://yandex.com/maps/?rtext=${encodeURIComponent(stops).replace(/%7E/g,'~')}&rtt=auto`;
+        }
+
+        function getFilteredCoords() {
+            if (!currentLayer || currentLayer.isRoute) return null;
+            const features = getFilteredFeatures().filter(f =>
+                f.geometry && f.geometry.type === 'Point' && f.geometry.coordinates?.length >= 2
+            );
+            return features.length ? features : null;
+        }
+
+        function doRoute(action, startPoint) {
+            const features = getFilteredCoords();
+            if (!features) {
+                routeStatus.className = 'route-status error';
+                routeStatus.textContent = 'No valid coordinates in filtered results.';
+                return;
+            }
+            const url = buildYandexRouteUrl(startPoint, features);
+            if (action === 'open') {
+                window.open(url, '_blank');
+                routeStatus.className = 'route-status success';
+                routeStatus.textContent = `Opened route with ${features.length} stop(s).`;
+            } else {
+                navigator.clipboard.writeText(url).then(() => {
+                    routeStatus.className = 'route-status success';
+                    routeStatus.textContent = `Link copied! (${features.length} stop(s))`;
+                }).catch(() => {
+                    routeStatus.className = 'route-status error';
+                    routeStatus.textContent = 'Could not copy to clipboard.';
+                });
+            }
+        }
+
+        function buildRouteWithGeolocation(action) {
+            const manualStart = $('route-start-input').value.trim();
+            if (manualStart) {
+                doRoute(action, manualStart);
+                return;
+            }
+            routeStatus.className = 'route-status';
+            routeStatus.textContent = 'Getting your location…';
+            navigator.geolocation.getCurrentPosition(
+                pos => doRoute(action, `${pos.coords.latitude},${pos.coords.longitude}`),
+                () => {
+                    routeStatus.className = 'route-status error';
+                    routeStatus.textContent = 'Location blocked. Enter a start address above.';
+                },
+                { timeout: 8000 }
+            );
+        }
+
+        $('open-route-btn').onclick = () => buildRouteWithGeolocation('open');
+        $('copy-route-btn').onclick = () => buildRouteWithGeolocation('copy');
 
         // Build alpha nav
         buildAlphaNav();
