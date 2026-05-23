@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Map Mania v2.1.2</title>
+    <title>GeoDesk v1.0</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
@@ -595,16 +595,334 @@
         }
         .route-status.error { color: #c0392b; }
         .route-status.success { color: var(--accent2); }
+
+        /* ── DRAW PANEL ── */
+        #draw-panel { overflow-y: auto; flex-direction: column; }
+
+        .draw-section {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .draw-tool-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            padding: 0 12px 12px;
+        }
+
+        .draw-tool-btn {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 8px 6px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            cursor: pointer;
+            background: var(--surface);
+            color: var(--text-2);
+            transition: all 0.12s;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .draw-tool-btn:hover { background: var(--surface2); border-color: var(--border-strong); }
+
+        .draw-tool-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .draw-style-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 14px;
+        }
+
+        .draw-style-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-3);
+            width: 38px;
+            flex-shrink: 0;
+        }
+
+        .draw-color-input {
+            width: 36px;
+            height: 28px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2px;
+            cursor: pointer;
+            background: var(--surface);
+        }
+
+        .draw-range {
+            flex: 1;
+            accent-color: var(--accent);
+        }
+
+        .draw-range-val {
+            font-size: 11px;
+            font-family: 'DM Mono', monospace;
+            color: var(--text-3);
+            width: 30px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .draw-hint {
+            margin: 8px 12px;
+            padding: 8px 12px;
+            background: var(--accent-soft);
+            border: 1px solid #e8c5be;
+            border-radius: var(--radius);
+            font-size: 11px;
+            color: var(--accent);
+            line-height: 1.4;
+            display: none;
+        }
+
+        .draw-hint.visible { display: block; }
+
+        .drawn-shape-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .drawn-shape-item:last-child { border-bottom: none; }
+
+        .drawn-shape-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text);
+        }
+
+        .drawn-shape-type {
+            font-size: 10px;
+            color: var(--text-3);
+            font-family: 'DM Mono', monospace;
+        }
+
+        .drawn-shape-delete {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-3);
+            font-size: 12px;
+            padding: 2px 5px;
+            border-radius: 4px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .drawn-shape-delete:hover { background: var(--accent-soft); color: var(--accent); }
+
+        .shape-edit-panel {
+            background: var(--surface2);
+            border-top: 1px solid var(--border);
+            padding: 8px 12px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .shape-edit-panel input[type="text"] {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            padding: 5px 8px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            color: var(--text);
+            width: 100%;
+        }
+        .shape-edit-panel input[type="text"]:focus { outline: none; border-color: var(--accent); }
+        .shape-edit-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--text-3);
+        }
+        .shape-edit-row label { width: 42px; flex-shrink: 0; font-weight: 600; }
+        .shape-edit-row input[type="color"] {
+            width: 30px; height: 24px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 1px;
+            cursor: pointer;
+            background: var(--surface);
+        }
+        .shape-edit-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+        .shape-edit-row .range-val { font-family: 'DM Mono', monospace; font-size: 11px; width: 30px; text-align: right; }
+        .shape-edit-actions { display: flex; gap: 6px; margin-top: 2px; }
+        .shape-edit-actions .btn { flex: 1; font-size: 11px; padding: 5px 8px; }
+
+        /* Floating draw toolbar on map */
+        #draw-floating-bar {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 500;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: var(--shadow-md);
+            padding: 6px 12px 6px 14px;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--accent);
+            pointer-events: all;
+        }
+
+        #draw-floating-bar.active { display: flex; }
+
+        /* ── MOBILE NAV (hidden on desktop) ── */
+        #mobile-nav { display: none; }
+        #mobile-drag-handle { display: none; }
+
+        /* ── MOBILE STYLES ── */
+        @media (max-width: 640px) {
+            body { flex-direction: column; position: fixed; inset: 0; overflow: hidden; }
+
+            /* Map fills screen above nav */
+            #map {
+                position: fixed;
+                inset: 0;
+                bottom: 56px;
+                height: calc(100dvh - 56px);
+                z-index: 0;
+            }
+
+            /* Sidebar becomes bottom sheet */
+            #sidebar {
+                position: fixed;
+                left: 0; right: 0; bottom: 56px;
+                width: 100%;
+                min-width: unset;
+                max-height: 72dvh;
+                border-right: none;
+                border-top: 1px solid var(--border);
+                border-radius: 18px 18px 0 0;
+                box-shadow: 0 -4px 24px rgba(0,0,0,0.13);
+                transform: translateY(100%);
+                transition: transform 0.32s cubic-bezier(.4,0,.2,1);
+                z-index: 100;
+                overflow: hidden;
+            }
+
+            #sidebar.mobile-open {
+                transform: translateY(0);
+            }
+
+            /* Drag handle */
+            #mobile-drag-handle {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 10px 0 6px;
+                cursor: grab;
+                flex-shrink: 0;
+            }
+            .handle-bar {
+                width: 36px; height: 4px;
+                background: var(--border-strong);
+                border-radius: 2px;
+            }
+
+            /* Hide desktop tab row — nav controls tabs on mobile */
+            #panel-tabs { display: none; }
+
+            /* Bigger tap targets */
+            .feature-item { padding: 12px 14px; }
+            .btn { padding: 9px 14px; font-size: 13px; }
+            .filter-select { font-size: 15px; padding: 10px 12px; }
+            .day-toggle { padding: 8px 11px; font-size: 12px; }
+            .layer-item { padding: 10px 14px; }
+
+            /* Full-width file action buttons */
+            #file-actions { flex-wrap: nowrap; overflow-x: auto; }
+            #file-actions .btn { flex-shrink: 0; }
+
+            /* Panel content height within sheet */
+            #panel-content {
+                max-height: calc(72dvh - 130px);
+                overflow: hidden;
+            }
+
+            /* Bottom nav */
+            #mobile-nav {
+                display: flex;
+                position: fixed;
+                bottom: 0; left: 0; right: 0;
+                height: 56px;
+                background: var(--surface);
+                border-top: 1px solid var(--border);
+                z-index: 200;
+            }
+
+            .mobile-nav-btn {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 2px;
+                border: none;
+                background: none;
+                cursor: pointer;
+                color: var(--text-3);
+                padding: 6px 0;
+                transition: color 0.15s;
+                font-family: 'DM Sans', sans-serif;
+            }
+
+            .mobile-nav-btn.active { color: var(--accent); }
+
+            .mnav-icon { font-size: 18px; line-height: 1; }
+            .mnav-label { font-size: 10px; font-weight: 500; letter-spacing: 0.2px; }
+
+            /* Modal full-screen on mobile */
+            .modal {
+                width: 100%;
+                max-width: 100%;
+                border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+                position: fixed;
+                bottom: 56px; left: 0; right: 0;
+                max-height: 85dvh;
+                margin: 0;
+            }
+
+            #modal-overlay { align-items: flex-end; }
+
+            /* Alpha nav wraps nicely on small screens */
+            #alpha-nav { gap: 1px; padding: 5px 8px; }
+            .alpha-btn { width: 18px; height: 18px; font-size: 9px; }
+        }
     </style>
 </head>
 <body>
     <div id="sidebar">
+        <!-- Drag handle (mobile only) -->
+        <div id="mobile-drag-handle"><div class="handle-bar"></div></div>
+
         <!-- Header -->
         <div id="app-header">
             <div class="app-title">
                 <span class="logo-dot"></span>
-                Map Mania
-                <span style="font-weight:300;color:var(--text-3);font-size:13px;margin-left:auto">v2.1.2</span>
+                GeoDesk
+                <span style="font-weight:300;color:var(--text-3);font-size:13px;margin-left:auto">v1.0</span>
             </div>
         </div>
 
@@ -632,6 +950,7 @@
         <div id="panel-tabs">
             <button class="tab-btn active" data-tab="locations">Locations</button>
             <button class="tab-btn" data-tab="filter">Filters</button>
+            <button class="tab-btn" data-tab="draw">Draw</button>
             <button class="tab-btn" data-tab="import">Import</button>
         </div>
 
@@ -712,6 +1031,60 @@
                 </div>
             </div>
 
+            <!-- ── DRAW PANEL ── -->
+            <div class="panel" id="draw-panel">
+                <div class="draw-section">
+                    <div class="section-label" style="padding:10px 14px 6px">Tool</div>
+                    <div class="draw-tool-grid">
+                        <button class="draw-tool-btn active" data-tool="pointer">↖ Pointer</button>
+                        <button class="draw-tool-btn" data-tool="move">✥ Move</button>
+                        <button class="draw-tool-btn" data-tool="marker">📍 Marker</button>
+                        <button class="draw-tool-btn" data-tool="line">╱ Line</button>
+                        <button class="draw-tool-btn" data-tool="polygon">⬡ Polygon</button>
+                        <button class="draw-tool-btn" data-tool="circle">○ Circle</button>
+                        <button class="draw-tool-btn" data-tool="rectangle">▭ Rectangle</button>
+                    </div>
+                </div>
+
+                <div class="draw-section">
+                    <div class="section-label" style="padding:10px 14px 6px">Style</div>
+                    <div class="draw-style-row">
+                        <span class="draw-style-label">Color</span>
+                        <input type="color" id="draw-color" value="#c84b2f" class="draw-color-input">
+                    </div>
+                    <div class="draw-style-row">
+                        <span class="draw-style-label">Stroke</span>
+                        <input type="range" id="draw-width" min="1" max="10" value="3" class="draw-range">
+                        <span class="draw-range-val" id="draw-width-val">3px</span>
+                    </div>
+                    <div class="draw-style-row">
+                        <span class="draw-style-label">Fill</span>
+                        <input type="range" id="draw-opacity" min="0" max="100" value="40" step="5" class="draw-range">
+                        <span class="draw-range-val" id="draw-opacity-val">40%</span>
+                    </div>
+                    <div class="draw-style-row">
+                        <span class="draw-style-label">Label</span>
+                        <input type="text" id="draw-label" placeholder="Optional name…" class="filter-select" style="flex:1;padding:5px 8px;font-size:12px">
+                    </div>
+                </div>
+
+                <div id="draw-hint" class="draw-hint">Select a tool to start drawing</div>
+
+                <div class="draw-section" style="flex:1;overflow-y:auto">
+                    <div class="section-label" style="padding:10px 14px 6px">Shapes</div>
+                    <div id="drawn-shapes-list">
+                        <div style="padding:8px 14px;font-size:12px;color:var(--text-3)">No shapes yet</div>
+                    </div>
+                </div>
+
+                <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:6px">
+                    <button class="btn" id="export-drawings" style="flex:1">💾 Export</button>
+                    <button class="btn" id="import-drawings-btn" style="flex:1">📂 Import</button>
+                    <input type="file" id="import-drawings-input" style="display:none" accept=".json">
+                    <button class="btn danger" id="clear-drawings" style="flex:1">✕ Clear</button>
+                </div>
+            </div>
+
             <!-- ── IMPORT PANEL ── -->
             <div class="panel" id="import-panel">
                 <div class="import-card">
@@ -734,6 +1107,12 @@
     <!-- Map -->
     <div id="map"></div>
 
+    <!-- Draw floating toolbar (visible only in draw mode) -->
+    <div id="draw-floating-bar">
+        <span id="draw-active-label">✏️ Drawing</span>
+        <button id="draw-exit-btn" class="btn" style="padding:4px 10px;font-size:11px">✕ Exit</button>
+    </div>
+
     <!-- Modal -->
     <div id="modal-overlay">
         <div class="modal" id="modal-box">
@@ -741,6 +1120,30 @@
             <div id="modal-body"></div>
         </div>
     </div>
+
+    <!-- Mobile bottom nav -->
+    <nav id="mobile-nav">
+        <button class="mobile-nav-btn" data-tab="map">
+            <span class="mnav-icon">🗺</span>
+            <span class="mnav-label">Map</span>
+        </button>
+        <button class="mobile-nav-btn active" data-tab="locations">
+            <span class="mnav-icon">📍</span>
+            <span class="mnav-label">Locations</span>
+        </button>
+        <button class="mobile-nav-btn" data-tab="filter">
+            <span class="mnav-icon">🔍</span>
+            <span class="mnav-label">Filters</span>
+        </button>
+        <button class="mobile-nav-btn" data-tab="draw">
+            <span class="mnav-icon">✏️</span>
+            <span class="mnav-label">Draw</span>
+        </button>
+        <button class="mobile-nav-btn" data-tab="import">
+            <span class="mnav-icon">📂</span>
+            <span class="mnav-label">Import</span>
+        </button>
+    </nav>
 
     <script src="https://api-maps.yandex.ru/2.1/?apikey=93c3d865-0103-43f9-8498-c654eb9bf7b4&lang=en_US"></script>
     <script>
@@ -909,9 +1312,472 @@
         $('open-route-btn').onclick = () => buildRouteWithGeolocation('open');
         $('copy-route-btn').onclick = () => buildRouteWithGeolocation('copy');
 
+        // Init drawing tools
+        initDrawing();
+
         // Build alpha nav
         buildAlphaNav();
     }
+
+    // ─── DRAWING SYSTEM ──────────────────────────────────────────
+    let drawingMode  = null;
+    let drawColor    = '#c84b2f';
+    let drawStrokeW  = 3;
+    let drawFillOpacity = 0.4;
+    let drawLabel    = '';
+    let drawPoints   = [];
+    let circleCenter = null;
+    let drawCollection;
+    let tempPreview  = null;   // committed-points polyline
+    let tempCircle   = null;   // circle ghost (recreated each frame)
+    let tempRect     = null;   // rect ghost (recreated each frame)
+    let tempSegment  = null;   // cursor→last-point segment
+    let drawnShapes  = [];
+    let editingShapeId = null;
+
+    const DRAW_HINTS = {
+        pointer:    '',
+        move:       'Drag any shape to reposition it. Click elsewhere when done.',
+        marker:     'Click on the map to place a marker.',
+        line:       'Left-click to add points.  Right-click to finish.',
+        polygon:    'Left-click to add points.  Right-click to close shape.',
+        circle:     'Click to set the center point.',
+        circle2:    'Move mouse to set radius — click to confirm.',
+        rectangle:  'Click the first corner.',
+        rectangle2: 'Move mouse to set size — click to confirm.',
+    };
+    const SHAPE_ICONS = { marker:'📍', line:'╱', polygon:'⬡', circle:'○', rectangle:'▭', move:'✥' };
+
+    // ── Init ────────────────────────────────────────────────────
+    function initDrawing() {
+        drawCollection = new ymaps.GeoObjectCollection();
+        map.geoObjects.add(drawCollection);
+
+        document.querySelectorAll('.draw-tool-btn').forEach(btn =>
+            btn.addEventListener('click', () => setDrawTool(btn.dataset.tool))
+        );
+        $('draw-color').addEventListener('input',   e => { drawColor = e.target.value; });
+        $('draw-width').addEventListener('input',   e => { drawStrokeW = +e.target.value; $('draw-width-val').textContent = e.target.value+'px'; });
+        $('draw-opacity').addEventListener('input', e => { drawFillOpacity = +e.target.value/100; $('draw-opacity-val').textContent = e.target.value+'%'; });
+        $('draw-label').addEventListener('input',   e => { drawLabel = e.target.value; });
+
+        $('draw-exit-btn').addEventListener('click',          () => setDrawTool('pointer'));
+        $('clear-drawings').addEventListener('click',         clearAllDrawings);
+        $('export-drawings').addEventListener('click',        exportDrawings);
+        $('import-drawings-btn').addEventListener('click',    () => $('import-drawings-input').click());
+        $('import-drawings-input').addEventListener('change', importDrawings);
+
+        // left-click  → place points / confirm shapes
+        map.events.add('click',       onMapClick);
+        // right-click → finish line / polygon
+        map.events.add('contextmenu', onMapRightClick);
+        // mouse move  → live ghost previews
+        map.events.add('mousemove',   onMapMouseMove);
+    }
+
+    // ── Tool switching ──────────────────────────────────────────
+    function setDrawTool(tool) {
+        // leave move mode cleanly
+        if (drawingMode === 'move') leaveMoveMode();
+
+        cancelCurrentDraw();
+        drawingMode = (tool === 'pointer') ? null : tool;
+
+        document.querySelectorAll('.draw-tool-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.tool === tool)
+        );
+
+        const mapEl    = map.container.getElement();
+        const hintEl   = $('draw-hint');
+        const floatBar = $('draw-floating-bar');
+
+        if (drawingMode) {
+            floatBar.classList.add('active');
+            $('draw-active-label').textContent = `✏️ ${tool.charAt(0).toUpperCase()+tool.slice(1)}`;
+            hintEl.textContent = DRAW_HINTS[tool] || '';
+            hintEl.classList.add('visible');
+
+            if (drawingMode === 'move') {
+                mapEl.style.cursor = 'grab';
+                enterMoveMode();
+            } else {
+                mapEl.style.cursor = 'crosshair';
+                // Make data-layer pins AND all drawn shapes click-transparent
+                // so map click events always reach our handlers
+                layers.forEach(l => l.geoObjects.options.set('interactivityModel','default#transparent'));
+                drawCollection.options.set('interactivityModel','default#transparent');
+            }
+        } else {
+            mapEl.style.cursor = '';
+            floatBar.classList.remove('active');
+            hintEl.classList.remove('visible');
+            // Restore normal interactivity
+            layers.forEach(l => l.geoObjects.options.unset('interactivityModel'));
+            drawCollection.options.unset('interactivityModel');
+        }
+    }
+
+    // ── Move mode ────────────────────────────────────────────────
+    function enterMoveMode() {
+        drawnShapes.forEach(s => {
+            if (!s.geoObject || s.visible === false) return;
+            s.geoObject.options.set('draggable', true);
+            s.geoObject.events.add('dragend', () => snapshotShapeCoords(s));
+        });
+    }
+    function leaveMoveMode() {
+        drawnShapes.forEach(s => {
+            if (!s.geoObject) return;
+            snapshotShapeCoords(s);
+            s.geoObject.options.set('draggable', false);
+            s.geoObject.events.remove('dragend');
+        });
+    }
+    function snapshotShapeCoords(shape) {
+        try {
+            const g = shape.geoObject.geometry;
+            if      (shape.type === 'marker')    shape.points = [g.getCoordinates()];
+            else if (shape.type === 'line')      shape.points = g.getCoordinates();
+            else if (shape.type === 'polygon')   shape.points = g.getCoordinates()[0];
+            else if (shape.type === 'circle')  { shape.points = [g.getCoordinates()]; shape.radius = g.getRadius(); }
+            else if (shape.type === 'rectangle') shape.points = g.getBounds();
+        } catch(e) {}
+    }
+
+    // ── Mouse move — ghost previews ──────────────────────────────
+    function onMapMouseMove(e) {
+        if (!drawingMode || drawingMode === 'move' || drawingMode === 'marker') return;
+        const coords = e.get('coords');
+
+        // CIRCLE: destroy+recreate each frame (most reliable across Yandex Maps versions;
+        // setRadius silently fails on shrink in 2.1)
+        if (drawingMode === 'circle' && circleCenter) {
+            const dist = haversine(circleCenter, coords);
+            if (tempCircle) { try { drawCollection.remove(tempCircle); } catch(_){} }
+            tempCircle = new ymaps.Circle([circleCenter, dist], {}, {
+                strokeColor: drawColor, strokeWidth: drawStrokeW,
+                strokeOpacity: 0.6, strokeStyle: 'dash',
+                fillColor: drawColor, fillOpacity: drawFillOpacity * 0.4,
+                interactivityModel: 'default#transparent'
+            });
+            drawCollection.add(tempCircle);
+            return;
+        }
+
+        // RECTANGLE: same destroy+recreate approach
+        if (drawingMode === 'rectangle' && drawPoints.length === 1) {
+            if (tempRect) { try { drawCollection.remove(tempRect); } catch(_){} }
+            tempRect = new ymaps.Rectangle([drawPoints[0], coords], {}, {
+                strokeColor: drawColor, strokeWidth: drawStrokeW,
+                strokeOpacity: 0.6, strokeStyle: 'dash',
+                fillColor: drawColor, fillOpacity: drawFillOpacity * 0.4,
+                interactivityModel: 'default#transparent'
+            });
+            drawCollection.add(tempRect);
+            return;
+        }
+
+        // LINE / POLYGON: live segment from last committed point to cursor
+        if ((drawingMode === 'line' || drawingMode === 'polygon') && drawPoints.length >= 1) {
+            const last = drawPoints[drawPoints.length - 1];
+            // For polygon also show closing edge back to first point
+            const segPts = (drawingMode === 'polygon' && drawPoints.length >= 2)
+                ? [last, coords, drawPoints[0]]
+                : [last, coords];
+
+            if (tempSegment) {
+                // Try in-place update; if it throws recreate
+                try { tempSegment.geometry.setCoordinates(segPts); return; } catch(_) {
+                    try { drawCollection.remove(tempSegment); } catch(__){} tempSegment = null;
+                }
+            }
+            tempSegment = new ymaps.Polyline(segPts, {}, {
+                strokeColor: drawColor, strokeWidth: drawStrokeW,
+                strokeOpacity: 0.5, strokeStyle: 'dash',
+                interactivityModel: 'default#transparent'
+            });
+            drawCollection.add(tempSegment);
+        }
+    }
+
+    // haversine distance in metres — avoids ymaps.coordSystem call which
+    // can fail when the API is still loading or when called from preview code
+    function haversine(a, b) {
+        const R = 6371000, rad = Math.PI/180;
+        const dLat = (b[0]-a[0])*rad, dLon = (b[1]-a[1])*rad;
+        const x = Math.sin(dLat/2)**2 + Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*Math.sin(dLon/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+    }
+
+    // ── Left-click — place points / confirm ─────────────────────
+    function onMapClick(e) {
+        if (!drawingMode || drawingMode === 'move') return;
+        const coords = e.get('coords');
+
+        if (drawingMode === 'marker') {
+            finishShape('marker', [coords]);
+
+        } else if (drawingMode === 'line' || drawingMode === 'polygon') {
+            drawPoints.push(coords);
+            updatePolyPreview();
+
+        } else if (drawingMode === 'circle') {
+            if (!circleCenter) {
+                circleCenter = coords;
+                $('draw-hint').textContent = DRAW_HINTS['circle2'];
+            } else {
+                const dist = haversine(circleCenter, coords);
+                clearCirclePreview();
+                finishShape('circle', [circleCenter], dist);
+                circleCenter = null;
+                $('draw-hint').textContent = DRAW_HINTS['circle'];
+            }
+
+        } else if (drawingMode === 'rectangle') {
+            drawPoints.push(coords);
+            if (drawPoints.length === 1) {
+                $('draw-hint').textContent = DRAW_HINTS['rectangle2'];
+            } else {
+                clearRectPreview();
+                finishShape('rectangle', [drawPoints[0], drawPoints[1]]);
+                $('draw-hint').textContent = DRAW_HINTS['rectangle'];
+            }
+        }
+    }
+
+    // ── Right-click — finish line / polygon ──────────────────────
+    function onMapRightClick(e) {
+        if (!drawingMode) return;
+        if (drawingMode !== 'line' && drawingMode !== 'polygon') return;
+        e.preventDefault();   // suppress browser context menu
+        if (drawingMode === 'line'    && drawPoints.length >= 2) finishShape('line',    [...drawPoints]);
+        if (drawingMode === 'polygon' && drawPoints.length >= 3) finishShape('polygon', [...drawPoints]);
+        drawPoints = [];
+        clearPolyPreview();
+    }
+
+    // ── Preview helpers ──────────────────────────────────────────
+    function updatePolyPreview() {
+        if (tempPreview) { try { drawCollection.remove(tempPreview); } catch(_){} tempPreview = null; }
+        if (drawPoints.length < 2) return;
+        const pts = (drawingMode === 'polygon') ? [...drawPoints, drawPoints[0]] : [...drawPoints];
+        tempPreview = new ymaps.Polyline(pts, {}, {
+            strokeColor: drawColor, strokeWidth: drawStrokeW,
+            strokeOpacity: 0.7, strokeStyle: 'dash',
+            interactivityModel: 'default#transparent'
+        });
+        drawCollection.add(tempPreview);
+    }
+
+    function clearPolyPreview() {
+        if (tempPreview) { try { drawCollection.remove(tempPreview); } catch(_){} tempPreview = null; }
+        if (tempSegment) { try { drawCollection.remove(tempSegment); } catch(_){} tempSegment = null; }
+    }
+    function clearCirclePreview() {
+        if (tempCircle)  { try { drawCollection.remove(tempCircle);  } catch(_){} tempCircle  = null; }
+    }
+    function clearRectPreview() {
+        if (tempRect)    { try { drawCollection.remove(tempRect);    } catch(_){} tempRect    = null; }
+    }
+    function cancelCurrentDraw() {
+        clearPolyPreview(); clearCirclePreview(); clearRectPreview();
+        drawPoints = []; circleCenter = null;
+    }
+
+    // ── Build final geoObject from shape record ──────────────────
+    function buildGeoObject(shape) {
+        const so = { strokeColor: shape.color, strokeWidth: shape.strokeW, strokeOpacity: 0.9 };
+        const fo = { ...so, fillColor: shape.color, fillOpacity: shape.fillOpacity };
+        if (shape.type === 'marker') {
+            return new ymaps.Placemark(shape.points[0],
+                { hintContent: shape.name, balloonContent: shape.name },
+                { iconLayout:'default#image', iconImageHref: createDotIcon(shape.color),
+                  iconImageSize:[22,22], iconImageOffset:[-11,-11] }
+            );
+        }
+        if (shape.type === 'line')      return new ymaps.Polyline(shape.points, { hintContent: shape.name }, so);
+        if (shape.type === 'polygon')   return new ymaps.Polygon([shape.points], { hintContent: shape.name }, fo);
+        if (shape.type === 'circle')    return new ymaps.Circle([shape.points[0], shape.radius], { hintContent: shape.name }, fo);
+        if (shape.type === 'rectangle') return new ymaps.Rectangle(shape.points, { hintContent: shape.name }, fo);
+        return null;
+    }
+
+    function finishShape(type, points, radius) {
+        cancelCurrentDraw();
+        const autoName = `${type.charAt(0).toUpperCase()+type.slice(1)} ${drawnShapes.length+1}`;
+        const shape = {
+            id: Date.now(), type,
+            name: drawLabel.trim() || autoName,
+            color: drawColor, strokeW: drawStrokeW, fillOpacity: drawFillOpacity,
+            points, radius: radius || null,
+            visible: true, geoObject: null
+        };
+        try { shape.geoObject = buildGeoObject(shape); } catch(err) { console.error('finishShape:', err); return; }
+        if (!shape.geoObject) return;
+        drawCollection.add(shape.geoObject);
+        drawnShapes.push(shape);
+        renderDrawnShapes();
+        $('draw-label').value = ''; drawLabel = '';
+    }
+
+    function createDotIcon(color) {
+        const svg = `<svg width="22" height="22" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="9" fill="${color}" stroke="white" stroke-width="2"/></svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    // ── Shapes list ──────────────────────────────────────────────
+    function renderDrawnShapes() {
+        const list = $('drawn-shapes-list');
+        if (!drawnShapes.length) {
+            list.innerHTML = '<div style="padding:8px 14px;font-size:12px;color:var(--text-3)">No shapes yet</div>';
+            editingShapeId = null; return;
+        }
+        list.innerHTML = '';
+        drawnShapes.forEach(shape => {
+            const wrap = document.createElement('div');
+            const hidden = shape.visible === false;
+
+            // Row
+            const item = document.createElement('div');
+            item.className = 'drawn-shape-item';
+            item.style.opacity = hidden ? '0.45' : '1';
+            item.innerHTML = `
+                <span style="width:10px;height:10px;background:${shape.color};border-radius:50%;display:inline-block;flex-shrink:0"></span>
+                <span style="font-size:13px;flex-shrink:0">${SHAPE_ICONS[shape.type]||'?'}</span>
+                <span class="drawn-shape-name">${shape.name}</span>
+                <span class="drawn-shape-type">${shape.type}</span>
+                <button class="drawn-shape-delete" data-a="vis"  title="${hidden?'Show':'Hide'}">${hidden?'🚫':'👁'}</button>
+                <button class="drawn-shape-delete" data-a="edit" title="Edit" style="color:var(--blue)">✎</button>
+                <button class="drawn-shape-delete" data-a="del"  title="Delete">✕</button>
+            `;
+
+            // Inline edit panel
+            const ep = document.createElement('div');
+            ep.className = 'shape-edit-panel';
+            ep.style.display = (editingShapeId === shape.id) ? 'flex' : 'none';
+            const noFill = shape.type === 'line' || shape.type === 'marker';
+            ep.innerHTML = `
+                <input type="text" class="ep-name" value="${shape.name}" placeholder="Name">
+                <div class="shape-edit-row">
+                    <label>Color</label>
+                    <input type="color" class="ep-color" value="${shape.color}">
+                </div>
+                <div class="shape-edit-row">
+                    <label>Stroke</label>
+                    <input type="range" class="ep-stroke" min="1" max="10" value="${shape.strokeW}">
+                    <span class="range-val ep-sw">${shape.strokeW}px</span>
+                </div>
+                <div class="shape-edit-row" ${noFill ? 'style="opacity:.35;pointer-events:none"' : ''}>
+                    <label>Fill</label>
+                    <input type="range" class="ep-opacity" min="0" max="100" step="5" value="${Math.round(shape.fillOpacity*100)}">
+                    <span class="range-val ep-fo">${Math.round(shape.fillOpacity*100)}%</span>
+                </div>
+                <div class="shape-edit-actions">
+                    <button class="btn primary ep-save">✓ Save</button>
+                    <button class="btn ep-cancel">Cancel</button>
+                </div>
+            `;
+            ep.querySelector('.ep-stroke').oninput  = function(){ ep.querySelector('.ep-sw').textContent = this.value+'px'; };
+            ep.querySelector('.ep-opacity').oninput = function(){ ep.querySelector('.ep-fo').textContent = this.value+'%'; };
+            ep.querySelector('.ep-save').onclick   = () => applyShapeEdit(shape.id, ep);
+            ep.querySelector('.ep-cancel').onclick = () => { editingShapeId = null; renderDrawnShapes(); };
+
+            item.querySelector('[data-a="vis"]').onclick  = () => toggleVisible(shape.id);
+            item.querySelector('[data-a="edit"]').onclick = () => { editingShapeId = editingShapeId === shape.id ? null : shape.id; renderDrawnShapes(); };
+            item.querySelector('[data-a="del"]').onclick  = () => deleteShape(shape.id);
+
+            wrap.appendChild(item);
+            wrap.appendChild(ep);
+            list.appendChild(wrap);
+        });
+    }
+
+    function toggleVisible(id) {
+        const s = drawnShapes.find(x => x.id === id);
+        if (!s || !s.geoObject) return;
+        s.visible = s.visible === false ? true : false;
+        s.geoObject.options.set('visible', s.visible);
+        renderDrawnShapes();
+    }
+
+    function applyShapeEdit(id, ep) {
+        const shape = drawnShapes.find(s => s.id === id);
+        if (!shape) return;
+        shape.name        = ep.querySelector('.ep-name').value.trim() || shape.name;
+        shape.color       = ep.querySelector('.ep-color').value;
+        shape.strokeW     = +ep.querySelector('.ep-stroke').value;
+        shape.fillOpacity = +ep.querySelector('.ep-opacity').value / 100;
+        try { drawCollection.remove(shape.geoObject); } catch(_) {}
+        shape.geoObject = null;
+        try { shape.geoObject = buildGeoObject(shape); } catch(_) {}
+        if (shape.geoObject) {
+            drawCollection.add(shape.geoObject);
+            if (!shape.visible) shape.geoObject.options.set('visible', false);
+        }
+        editingShapeId = null;
+        renderDrawnShapes();
+    }
+
+    function deleteShape(id) {
+        const idx = drawnShapes.findIndex(s => s.id === id);
+        if (idx < 0) return;
+        try { drawCollection.remove(drawnShapes[idx].geoObject); } catch(_) {}
+        if (editingShapeId === drawnShapes[idx].id) editingShapeId = null;
+        drawnShapes.splice(idx, 1);
+        renderDrawnShapes();
+    }
+
+    function clearAllDrawings() {
+        if (!drawnShapes.length) return;
+        if (!confirm(`Delete all ${drawnShapes.length} drawing(s)?`)) return;
+        drawnShapes.forEach(s => { try { drawCollection.remove(s.geoObject); } catch(_){} });
+        drawnShapes = []; editingShapeId = null;
+        cancelCurrentDraw(); renderDrawnShapes();
+    }
+
+    // ── Export / Import ──────────────────────────────────────────
+    function exportDrawings() {
+        if (!drawnShapes.length) { alert('No drawings to export.'); return; }
+        const data = drawnShapes.map(({ id,type,name,color,strokeW,fillOpacity,points,radius,visible }) =>
+            ({ id,type,name,color,strokeW,fillOpacity,points,radius,visible })
+        );
+        const blob = new Blob([JSON.stringify(data,null,2)], { type:'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `geodesk-drawings-${new Date().toISOString().slice(0,10)}.json`;
+        a.click(); URL.revokeObjectURL(a.href);
+    }
+
+    function importDrawings(e) {
+        const file = e.target.files[0]; if (!file) return;
+        e.target.value = '';
+        const reader = new FileReader();
+        reader.onload = ev => {
+            let data;
+            try { data = JSON.parse(ev.target.result); } catch { alert('Invalid drawings file.'); return; }
+            if (!Array.isArray(data)) { alert('Invalid drawings file.'); return; }
+            let loaded = 0;
+            data.forEach(s => {
+                try {
+                    const shape = {
+                        id: Date.now()+Math.random(), type:s.type, name:s.name,
+                        color:s.color, strokeW:s.strokeW??3, fillOpacity:s.fillOpacity??0.4,
+                        points:s.points, radius:s.radius??null, visible:s.visible??true, geoObject:null
+                    };
+                    shape.geoObject = buildGeoObject(shape);
+                    if (shape.geoObject) {
+                        if (!shape.visible) shape.geoObject.options.set('visible', false);
+                        drawCollection.add(shape.geoObject);
+                        drawnShapes.push(shape); loaded++;
+                    }
+                } catch(err) { console.warn('Skipped:', err); }
+            });
+            renderDrawnShapes();
+            alert(`Imported ${loaded} of ${data.length} shape(s).`);
+        };
+        reader.readAsText(file);
+    }
+
 
     // ─── ALPHA NAV ────────────────────────────────────────────────
     function buildAlphaNav() {
@@ -1422,6 +2288,43 @@
         });
         return [[minLat, minLon], [maxLat, maxLon]];
     }
+
+    // ─── MOBILE NAV ──────────────────────────────────────────────
+    // Runs after DOM is ready; doesn't need ymaps
+    (function initMobileNav() {
+        const sidebarEl = document.getElementById('sidebar');
+        const navBtns = document.querySelectorAll('.mobile-nav-btn');
+
+        function switchTab(tab) {
+            navBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            if (tab === 'map') {
+                sidebarEl.classList.remove('mobile-open');
+                return;
+            }
+            sidebarEl.classList.add('mobile-open');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === tab + '-panel'));
+            activeTab = tab;
+        }
+
+        navBtns.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+        document.getElementById('map').addEventListener('click', () => {
+            if (window.innerWidth <= 640) switchTab('map');
+        });
+
+        const handle = document.getElementById('mobile-drag-handle');
+        let startY = 0;
+        handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
+        handle.addEventListener('touchend', e => {
+            if (e.changedTouches[0].clientY - startY > 60) switchTab('map');
+        }, { passive: true });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 640) sidebarEl.classList.remove('mobile-open');
+        });
+    })();
     </script>
+
 </body>
 </html>
