@@ -873,6 +873,45 @@
             color: white;
         }
 
+        /* Pulsing location marker */
+        .pulse-dot {
+            position: relative;
+            width: 16px;
+            height: 16px;
+        }
+
+        .pulse-dot-inner {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #4285F4;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(66, 133, 244, 0.6);
+            z-index: 2;
+        }
+
+        .pulse-dot-ring {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #4285F4;
+            border-radius: 50%;
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            z-index: 1;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(3);
+                opacity: 0;
+            }
+        }
+
         /* ── MOBILE NAV (hidden on desktop) ── */
         #mobile-nav { display: none; }
         #mobile-drag-handle { display: none; }
@@ -1013,7 +1052,7 @@
             <div class="app-title">
                 <span class="logo-dot"></span>
                 GeoDesk
-                <span style="font-weight:300;color:var(--text-3);font-size:13px;margin-left:auto">v1.0</span>
+                <span style="font-weight:300;color:var(--text-3);font-size:13px;margin-left:auto">v1.2</span>
             </div>
         </div>
 
@@ -1255,6 +1294,8 @@
     let searchQuery = '';
     let activeTab = 'locations';
     let userLocationMarker = null;
+    let locationWatchId = null;
+    let isTrackingLocation = false;
 
     // ─── DOM REFS ────────────────────────────────────────────────
     const $ = id => document.getElementById(id);
@@ -2177,48 +2218,90 @@
         }
 
         const btn = $('my-location-btn');
+
+        // If already tracking, stop it
+        if (isTrackingLocation) {
+            navigator.geolocation.clearWatch(locationWatchId);
+            locationWatchId = null;
+            isTrackingLocation = false;
+            btn.classList.remove('active');
+            
+            // Optionally remove the marker when stopping
+            // if (userLocationMarker) {
+            //     map.geoObjects.remove(userLocationMarker);
+            //     userLocationMarker = null;
+            // }
+            return;
+        }
+
+        // Start tracking
         btn.classList.add('active');
+        isTrackingLocation = true;
 
-        navigator.geolocation.getCurrentPosition(
-            position => {
-                const { latitude, longitude } = position.coords;
-                const coords = [latitude, longitude];
+        const updateLocation = (position) => {
+            const { latitude, longitude, accuracy } = position.coords;
+            const coords = [latitude, longitude];
 
-                // Remove old marker if exists
-                if (userLocationMarker) {
-                    map.geoObjects.remove(userLocationMarker);
+            // Remove old marker if exists
+            if (userLocationMarker) {
+                map.geoObjects.remove(userLocationMarker);
+            }
+
+            // Create pulsing dot marker
+            const pulsingDotLayout = ymaps.templateLayoutFactory.createClass(
+                '<div class="pulse-dot">' +
+                    '<div class="pulse-dot-ring"></div>' +
+                    '<div class="pulse-dot-inner"></div>' +
+                '</div>'
+            );
+
+            userLocationMarker = new ymaps.Placemark(coords, {
+                hintContent: 'Your Location',
+                balloonContent: `Your current location<br>Accuracy: ±${Math.round(accuracy)}m`
+            }, {
+                iconLayout: pulsingDotLayout,
+                iconShape: {
+                    type: 'Circle',
+                    coordinates: [0, 0],
+                    radius: 20
                 }
+            });
 
-                // Create a custom marker for user location
-                userLocationMarker = new ymaps.Placemark(coords, {
-                    hintContent: 'Your Location',
-                    balloonContent: `Your current location<br>Accuracy: ±${Math.round(position.coords.accuracy)}m`
-                }, {
-                    preset: 'islands#blueDotIcon',
-                    iconColor: '#4285F4'
-                });
-
-                map.geoObjects.add(userLocationMarker);
+            map.geoObjects.add(userLocationMarker);
+            
+            // Only center on first update
+            if (!locationWatchId) {
                 map.setCenter(coords, 15, { duration: 500 });
+            }
+        };
 
-                btn.classList.remove('active');
-            },
-            error => {
-                btn.classList.remove('active');
-                let message = 'Unable to get your location';
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        message = 'Location access denied. Please allow location access in your browser settings.';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        message = 'Location information unavailable';
-                        break;
-                    case error.TIMEOUT:
-                        message = 'Location request timed out';
-                        break;
-                }
-                alert(message);
-            },
+        const handleError = (error) => {
+            btn.classList.remove('active');
+            isTrackingLocation = false;
+            if (locationWatchId) {
+                navigator.geolocation.clearWatch(locationWatchId);
+                locationWatchId = null;
+            }
+
+            let message = 'Unable to get your location';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    message = 'Location access denied. Please allow location access in your browser settings.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    message = 'Location information unavailable';
+                    break;
+                case error.TIMEOUT:
+                    message = 'Location request timed out';
+                    break;
+            }
+            alert(message);
+        };
+
+        // Start watching position
+        locationWatchId = navigator.geolocation.watchPosition(
+            updateLocation,
+            handleError,
             {
                 enableHighAccuracy: true,
                 timeout: 10000,
@@ -2468,35 +2551,4 @@
         const navBtns = document.querySelectorAll('.mobile-nav-btn');
 
         function switchTab(tab) {
-            navBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-            if (tab === 'map') {
-                sidebarEl.classList.remove('mobile-open');
-                return;
-            }
-            sidebarEl.classList.add('mobile-open');
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-            document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === tab + '-panel'));
-            activeTab = tab;
-        }
-
-        navBtns.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
-
-        document.getElementById('map').addEventListener('click', () => {
-            if (window.innerWidth <= 640) switchTab('map');
-        });
-
-        const handle = document.getElementById('mobile-drag-handle');
-        let startY = 0;
-        handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
-        handle.addEventListener('touchend', e => {
-            if (e.changedTouches[0].clientY - startY > 60) switchTab('map');
-        }, { passive: true });
-
-        window.addEventListener('resize', () => {
-            if (window.innerWidth > 640) sidebarEl.classList.remove('mobile-open');
-        });
-    })();
-    </script>
-
-</body>
-</html>
+            navBtns.forEach(b => b.class
