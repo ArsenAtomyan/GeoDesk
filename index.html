@@ -250,6 +250,54 @@
 
         .filter-select:focus { outline: none; border-color: var(--accent); }
 
+        /* Checkbox lists */
+        .filter-checkbox-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 140px;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+
+        .filter-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.12s;
+            user-select: none;
+        }
+
+        .filter-checkbox-item:hover {
+            background: var(--surface2);
+        }
+
+        .filter-checkbox-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .filter-checkbox-label {
+            font-size: 13px;
+            color: var(--text);
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .filter-checkbox-list:empty::after {
+            content: 'No options';
+            font-size: 12px;
+            color: var(--text-3);
+            padding: 8px;
+            display: block;
+        }
+
         /* Weekday toggles */
         .weekday-toggles {
             display: flex;
@@ -788,6 +836,43 @@
 
         #draw-floating-bar.active { display: flex; }
 
+        /* My Location button */
+        .map-control-btn {
+            position: fixed;
+            bottom: 110px;
+            right: 16px;
+            z-index: 400;
+            width: 44px;
+            height: 44px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            color: var(--text-2);
+        }
+
+        .map-control-btn:hover {
+            background: var(--surface2);
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .map-control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .map-control-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
         /* ── MOBILE NAV (hidden on desktop) ── */
         #mobile-nav { display: none; }
         #mobile-drag-handle { display: none; }
@@ -909,6 +994,12 @@
             /* Alpha nav wraps nicely on small screens */
             #alpha-nav { gap: 1px; padding: 5px 8px; }
             .alpha-btn { width: 18px; height: 18px; font-size: 9px; }
+
+            /* My Location button on mobile */
+            .map-control-btn {
+                bottom: 70px;
+                right: 12px;
+            }
         }
     </style>
 </head>
@@ -976,33 +1067,23 @@
             <div class="panel" id="filter-panel">
                 <div class="filter-row">
                     <span class="filter-label">Status</span>
-                    <select class="filter-select" id="filter-status">
-                        <option value="">All Statuses</option>
-                    </select>
+                    <div class="filter-checkbox-list" id="filter-status-list"></div>
                 </div>
                 <div class="filter-row">
                     <span class="filter-label">Color</span>
-                    <select class="filter-select" id="filter-color">
-                        <option value="">All Colors</option>
-                    </select>
+                    <div class="filter-checkbox-list" id="filter-color-list"></div>
                 </div>
                 <div class="filter-row">
                     <span class="filter-label">Car</span>
-                    <select class="filter-select" id="filter-car">
-                        <option value="">All Cars</option>
-                    </select>
+                    <div class="filter-checkbox-list" id="filter-car-list"></div>
                 </div>
                 <div class="filter-row">
                     <span class="filter-label">Driver</span>
-                    <select class="filter-select" id="filter-driver">
-                        <option value="">All Drivers</option>
-                    </select>
+                    <div class="filter-checkbox-list" id="filter-driver-list"></div>
                 </div>
                 <div class="filter-row">
                     <span class="filter-label">Owner</span>
-                    <select class="filter-select" id="filter-owner">
-                        <option value="">All Owners</option>
-                    </select>
+                    <div class="filter-checkbox-list" id="filter-owner-list"></div>
                 </div>
                 <div class="filter-row">
                     <span class="filter-label">Open on days (AND)</span>
@@ -1017,7 +1098,6 @@
                     </div>
                 </div>
                 <div class="filter-actions">
-                    <button class="btn primary" id="apply-filter">Apply</button>
                     <button class="btn" id="clear-filter">Clear All</button>
                 </div>
                 <div class="route-section">
@@ -1107,6 +1187,18 @@
     <!-- Map -->
     <div id="map"></div>
 
+    <!-- My Location button (floating on map) -->
+    <button id="my-location-btn" class="map-control-btn" title="My Location">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="3"/>
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="2" x2="12" y2="4"/>
+            <line x1="12" y1="20" x2="12" y2="22"/>
+            <line x1="2" y1="12" x2="4" y2="12"/>
+            <line x1="20" y1="12" x2="22" y2="12"/>
+        </svg>
+    </button>
+
     <!-- Draw floating toolbar (visible only in draw mode) -->
     <div id="draw-floating-bar">
         <span id="draw-active-label">✏️ Drawing</span>
@@ -1159,9 +1251,10 @@
     let map;
     let layers = [];
     let currentLayer = null;
-    let currentFilters = { status:'', color:'', car:'', driver:'', owner:'', days:[] };
+    let currentFilters = { status:[], color:[], car:[], driver:[], owner:[], days:[] };
     let searchQuery = '';
     let activeTab = 'locations';
+    let userLocationMarker = null;
 
     // ─── DOM REFS ────────────────────────────────────────────────
     const $ = id => document.getElementById(id);
@@ -1172,11 +1265,11 @@
         countShown: $('count-shown'),
         countTotal: $('count-total'),
         alphaNav: $('alpha-nav'),
-        filterStatus: $('filter-status'),
-        filterColor: $('filter-color'),
-        filterCar: $('filter-car'),
-        filterDriver: $('filter-driver'),
-        filterOwner: $('filter-owner'),
+        filterStatusList: $('filter-status-list'),
+        filterColorList: $('filter-color-list'),
+        filterCarList: $('filter-car-list'),
+        filterDriverList: $('filter-driver-list'),
+        filterOwnerList: $('filter-owner-list'),
         weekdayToggles: document.querySelectorAll('.day-toggle'),
         pasteArea: $('paste-area'),
         modalOverlay: $('modal-overlay'),
@@ -1213,12 +1306,8 @@
         $('kml-input').onchange = importKML;
         $('csv-input').onchange = importCSV;
 
-        // Filters — live apply on every change
-        $('apply-filter').onclick = applyFilters;
+        // Filters — auto-apply on checkbox change (set up in populateDynamicFilters)
         $('clear-filter').onclick = clearFilters;
-        [el.filterStatus, el.filterColor, el.filterCar, el.filterDriver, el.filterOwner].forEach(sel => {
-            sel.addEventListener('change', applyFilters);
-        });
         el.weekdayToggles.forEach(t => t.onclick = () => {
             t.classList.toggle('on');
             const day = t.dataset.day;
@@ -1235,6 +1324,9 @@
             searchQuery = e.target.value.toLowerCase().trim();
             renderFeatureList();
         });
+
+        // My Location
+        $('my-location-btn').onclick = showMyLocation;
 
         // Paste import
         $('parse-paste').onclick = () => {
@@ -1917,11 +2009,19 @@
             const name = (p.name || '').toLowerCase();
             const addr = (p.address || '').toLowerCase();
             const matchSearch = !searchQuery || name.includes(searchQuery) || addr.includes(searchQuery) || (p.phone||'').includes(searchQuery);
-            const matchStatus = !currentFilters.status || (p.status||'').toLowerCase() === currentFilters.status;
-            const matchColor = !currentFilters.color || (p.color||'').toLowerCase() === currentFilters.color;
-            const matchCar = !currentFilters.car || p.car === currentFilters.car;
-            const matchDriver = !currentFilters.driver || p.driver === currentFilters.driver;
-            const matchOwner = !currentFilters.owner || p.owner === currentFilters.owner;
+            
+            // Multi-select filters: match if array is empty OR value is in the array
+            const matchStatus = currentFilters.status.length === 0 || 
+                currentFilters.status.some(s => (p.status||'').toLowerCase() === s.toLowerCase());
+            const matchColor = currentFilters.color.length === 0 || 
+                currentFilters.color.some(c => (p.color||'').toLowerCase() === c.toLowerCase());
+            const matchCar = currentFilters.car.length === 0 || 
+                currentFilters.car.includes(p.car);
+            const matchDriver = currentFilters.driver.length === 0 || 
+                currentFilters.driver.includes(p.driver);
+            const matchOwner = currentFilters.owner.length === 0 || 
+                currentFilters.owner.includes(p.owner);
+            
             const matchDays = currentFilters.days.length === 0 || currentFilters.days.every(d => {
                 const v = (p[d] || '').toString().toUpperCase();
                 return v === 'TRUE' || v === '1' || v === 'YES';
@@ -2046,26 +2146,85 @@
 
     // ─── FILTERS ──────────────────────────────────────────────────
     function applyFilters() {
-        currentFilters.status = el.filterStatus.value;
-        currentFilters.color = el.filterColor.value;
-        currentFilters.car = el.filterCar.value;
-        currentFilters.driver = el.filterDriver.value;
-        currentFilters.owner = el.filterOwner.value;
+        // Collect checked values from each checkbox list
+        currentFilters.status = Array.from(el.filterStatusList.querySelectorAll('input:checked')).map(cb => cb.value);
+        currentFilters.color = Array.from(el.filterColorList.querySelectorAll('input:checked')).map(cb => cb.value);
+        currentFilters.car = Array.from(el.filterCarList.querySelectorAll('input:checked')).map(cb => cb.value);
+        currentFilters.driver = Array.from(el.filterDriverList.querySelectorAll('input:checked')).map(cb => cb.value);
+        currentFilters.owner = Array.from(el.filterOwnerList.querySelectorAll('input:checked')).map(cb => cb.value);
         // days already updated via toggle clicks
         renderFeatureList();
     }
 
     function clearFilters() {
-        el.filterStatus.value = '';
-        el.filterColor.value = '';
-        el.filterCar.value = '';
-        el.filterDriver.value = '';
-        el.filterOwner.value = '';
-        currentFilters = { status:'', color:'', car:'', driver:'', owner:'', days:[] };
+        // Uncheck all checkboxes
+        el.filterStatusList.querySelectorAll('input').forEach(cb => cb.checked = false);
+        el.filterColorList.querySelectorAll('input').forEach(cb => cb.checked = false);
+        el.filterCarList.querySelectorAll('input').forEach(cb => cb.checked = false);
+        el.filterDriverList.querySelectorAll('input').forEach(cb => cb.checked = false);
+        el.filterOwnerList.querySelectorAll('input').forEach(cb => cb.checked = false);
+        currentFilters = { status:[], color:[], car:[], driver:[], owner:[], days:[] };
         el.weekdayToggles.forEach(t => t.classList.remove('on'));
         searchQuery = '';
         el.searchInput.value = '';
         renderFeatureList();
+    }
+
+    function showMyLocation() {
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser');
+            return;
+        }
+
+        const btn = $('my-location-btn');
+        btn.classList.add('active');
+
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const { latitude, longitude } = position.coords;
+                const coords = [latitude, longitude];
+
+                // Remove old marker if exists
+                if (userLocationMarker) {
+                    map.geoObjects.remove(userLocationMarker);
+                }
+
+                // Create a custom marker for user location
+                userLocationMarker = new ymaps.Placemark(coords, {
+                    hintContent: 'Your Location',
+                    balloonContent: `Your current location<br>Accuracy: ±${Math.round(position.coords.accuracy)}m`
+                }, {
+                    preset: 'islands#blueDotIcon',
+                    iconColor: '#4285F4'
+                });
+
+                map.geoObjects.add(userLocationMarker);
+                map.setCenter(coords, 15, { duration: 500 });
+
+                btn.classList.remove('active');
+            },
+            error => {
+                btn.classList.remove('active');
+                let message = 'Unable to get your location';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        message = 'Location access denied. Please allow location access in your browser settings.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        message = 'Location information unavailable';
+                        break;
+                    case error.TIMEOUT:
+                        message = 'Location request timed out';
+                        break;
+                }
+                alert(message);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
     }
 
     function populateDynamicFilters() {
@@ -2082,21 +2241,34 @@
             if (f.properties.driver) drivers.add(f.properties.driver);
             if (f.properties.owner) owners.add(f.properties.owner);
         });
-        const fillSelect = (sel, values, allLabel) => {
-            const cur = sel.value;
-            sel.innerHTML = `<option value="">${allLabel}</option>`;
+        
+        const createCheckboxList = (container, values, filterKey) => {
+            container.innerHTML = '';
             [...values].sort().forEach(v => {
-                const o = document.createElement('option');
-                o.value = v; o.textContent = v;
-                sel.appendChild(o);
+                const item = document.createElement('label');
+                item.className = 'filter-checkbox-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = v;
+                checkbox.checked = currentFilters[filterKey].includes(v);
+                checkbox.addEventListener('change', applyFilters);
+                
+                const label = document.createElement('span');
+                label.className = 'filter-checkbox-label';
+                label.textContent = v;
+                
+                item.appendChild(checkbox);
+                item.appendChild(label);
+                container.appendChild(item);
             });
-            sel.value = cur;
         };
-        fillSelect(el.filterStatus, statuses, 'All Statuses');
-        fillSelect(el.filterColor, colors, 'All Colors');
-        fillSelect(el.filterCar, cars, 'All Cars');
-        fillSelect(el.filterDriver, drivers, 'All Drivers');
-        fillSelect(el.filterOwner, owners, 'All Owners');
+        
+        createCheckboxList(el.filterStatusList, statuses, 'status');
+        createCheckboxList(el.filterColorList, colors, 'color');
+        createCheckboxList(el.filterCarList, cars, 'car');
+        createCheckboxList(el.filterDriverList, drivers, 'driver');
+        createCheckboxList(el.filterOwnerList, owners, 'owner');
     }
 
     // ─── IMPORT: GeoJSON ─────────────────────────────────────────
