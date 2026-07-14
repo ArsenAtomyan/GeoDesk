@@ -7,6 +7,7 @@
 ---
 
 ## Overview
+Totally Vibecoded (claude only)
 
 GeoDesk turns a list of locations into an interactive map workspace. Import data by pasting CSV, organize it into layers, filter it down with multi-select checkboxes and weekday toggles, search and browse it in an A–Z indexed sidebar, draw custom shapes directly on the map, and build routes to any point — all from a single `index.html` file with no backend, build step, or dependencies to install.
 
